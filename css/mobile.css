@@ -636,6 +636,12 @@ body.mobile-view .mobile-close-btn:focus-visible {
     outline-offset: 2px;
 }
 
+body.mobile-view .mobile-panel-action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 body.mobile-view .mobile-panel-clear-btn {
     color: rgba(255, 255, 255, 0.9);
     border-color: rgba(255, 255, 255, 0.2);
@@ -797,6 +803,22 @@ body.mobile-view .search-area .search-results {
     width: min(100%, 340px);
     box-sizing: border-box;
     align-self: center;
+}
+
+body.mobile-view .search-results-toolbar {
+    width: min(100%, 340px);
+    margin: 0 auto;
+    padding-top: 8px;
+}
+
+body.mobile-view .import-selected-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+body.mobile-view .search-results-list {
+    width: min(100%, 340px);
+    margin: 0 auto;
 }
 
 body.mobile-view .search-area > :not(.mobile-close-btn) {

@@ -112,7 +112,16 @@
                     <span>搜索</span>
                 </button>
             </div>
-            <div id="searchResults" class="search-results"></div>
+            <div id="searchResults" class="search-results">
+                <div class="search-results-toolbar">
+                    <button id="importSelectedBtn" class="import-selected-btn" type="button" disabled>
+                        <i class="fas fa-file-import" aria-hidden="true"></i>
+                        <span class="import-selected-label">导入已选</span>
+                        <span id="importSelectedCount" class="import-selected-count" aria-hidden="true"></span>
+                    </button>
+                </div>
+                <div id="searchResultsList" class="search-results-list"></div>
+            </div>
         </div>
 
         <div class="main-content">
@@ -151,6 +160,26 @@
                     <div class="mobile-panel-title" id="mobilePanelTitle">播放列表</div>
                     <div class="mobile-panel-actions">
                         <button
+                            id="mobileImportPlaylistBtn"
+                            class="mobile-panel-action-btn"
+                            type="button"
+                            aria-label="导入播放列表"
+                            title="导入播放列表"
+                        >
+                            <i class="fas fa-file-import" aria-hidden="true"></i>
+                        </button>
+                        <button
+                            id="mobileExportPlaylistBtn"
+                            class="mobile-panel-action-btn"
+                            type="button"
+                            aria-label="导出播放列表"
+                            title="导出播放列表"
+                            aria-disabled="true"
+                            disabled
+                        >
+                            <i class="fas fa-file-export" aria-hidden="true"></i>
+                        </button>
+                        <button
                             id="mobileClearPlaylistBtn"
                             class="mobile-panel-action-btn mobile-panel-clear-btn"
                             type="button"
@@ -158,6 +187,7 @@
                             title="清空播放列表"
                             onclick="clearPlaylist()"
                             hidden
+                            aria-hidden="true"
                         >
                             <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
@@ -168,10 +198,46 @@
                 </div>
 
                 <div class="playlist active empty" id="playlist">
-                    <div class="playlist-label" aria-hidden="true">播放列表</div>
-                    <button class="clear-playlist-btn" id="clearPlaylistBtn" onclick="clearPlaylist()" title="清空播放列表">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <div class="playlist-header">
+                        <div class="playlist-label" aria-hidden="true">播放列表</div>
+                        <div class="playlist-actions-tray" role="group" aria-label="播放列表操作">
+                            <input
+                                id="importPlaylistInput"
+                                class="playlist-import-input"
+                                type="file"
+                                accept="application/json"
+                                hidden
+                            />
+                            <button
+                                class="playlist-action-btn playlist-action-btn--import"
+                                id="importPlaylistBtn"
+                                type="button"
+                                title="导入播放列表"
+                                aria-label="导入播放列表"
+                            >
+                                <i class="fas fa-file-import" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                class="playlist-action-btn playlist-action-btn--export"
+                                id="exportPlaylistBtn"
+                                type="button"
+                                title="导出播放列表"
+                                aria-label="导出播放列表"
+                            >
+                                <i class="fas fa-file-export" aria-hidden="true"></i>
+                            </button>
+                            <button
+                                class="playlist-action-btn playlist-action-btn--clear clear-playlist-btn"
+                                id="clearPlaylistBtn"
+                                type="button"
+                                onclick="clearPlaylist()"
+                                title="清空播放列表"
+                                aria-label="清空播放列表"
+                            >
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
                     <div class="playlist-scroll">
                         <div class="playlist-items" id="playlistItems"></div>
                     </div>
@@ -220,7 +286,7 @@
 
     <div class="mobile-overlay-scrim" id="mobileOverlayScrim"></div>
 
-    <audio id="audioPlayer"></audio>
+    <audio id="audioPlayer" preload="metadata" playsinline></audio>
 
 <!-- 通知容器 -->
 <div id="notification" class="notification"></div>
