@@ -11,7 +11,7 @@
 ## 🤝 参与贡献
 感谢 GD音乐台(music.gdstudio.xyz)提供的免费API
 
-感谢 来自Linux.do 牛就是牛@ufoo 大佬 https://linux.do/t/topic/942415提供的灵感
+感谢 来自Linux.do 牛就是牛@ufoo 大佬 https://linux.do/t/topic/942415 提供的灵感
 
 
 ## 🌟 主要特性
