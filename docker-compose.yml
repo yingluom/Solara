@@ -8,8 +8,8 @@ services:
     ports:
       - "8787:8787"
     environment:
-      # 在这里配置你的 Solara 登录密码，Wrangler 会自动将其读取到代码中
+      # 登录密码（不设置则无密码保护）
       - PASSWORD=your_secure_password_here
     volumes:
-      # 持久化存储 D1 数据库（收藏夹和播放数据）
+      # 持久化 SQLite 数据库（收藏夹和播放记录）
       - ./data:/app/data

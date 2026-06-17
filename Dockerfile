@@ -2,24 +2,24 @@ FROM node:22-slim
 
 WORKDIR /app
 
-# 安装必要的 CA 证书，避免 HTTPS 请求报 TLS 错误
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# 安装 CA 证书，确保 HTTPS 上游请求正常
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
 
-# 安装 wrangler 和 npm
-RUN npm install -g wrangler@latest
+# 先复制 package.json，利用 Docker 层缓存加速重复构建
+COPY server/package.json server/
 
-# 将项目的所有文件复制到容器内
+# 安装依赖（只有 express + cookie-parser，纯 JS，无需编译）
+RUN cd server && npm install --omit=dev
+
+# 复制全部项目文件
 COPY . .
 
-# 复制启动脚本并赋予执行权限
-COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# 创建数据存放目录
+# 创建数据持久化目录（SQLite 数据库写入此处）
 RUN mkdir -p /app/data
 
-# 暴露 wrangler 默认运行的 8787 端口
 EXPOSE 8787
 
-# 设置启动命令
-ENTRYPOINT ["docker-entrypoint.sh"]
+# 启用 node:sqlite 实验性模块（Node 22.5+ 支持，22.x 默认启用）
+CMD ["node", "--experimental-sqlite", "server/index.js"]
