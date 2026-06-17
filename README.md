@@ -38,10 +38,8 @@
 ---
 
 ### 🐳 Docker 一键部署 (适合私有服务器)
-无需下载和编译源码，只需在您的服务器上新建一个空白目录，创建 `docker-compose.yml` 文件，并根据您的实际端口占用情况选择合适的端口映射：
+无需下载和编译源码，只需在您的服务器上新建一个空白目录，创建 `docker-compose.yml` 文件，并配置相应的端口映射（默认推荐宿主机端口为 `8080`，可根据需要自行修改，配合 Nginx 等反向代理或直接外网访问）：
 
-#### 场景 1：80 端口未被占用
-直接将容器的 `8787` 端口映射到宿主机的 `80` 端口，外网可直接通过域名或 IP 访问：
 ```yaml
 services:
   solara:
@@ -49,7 +47,7 @@ services:
     container_name: solara
     restart: always
     ports:
-      - "80:8787"
+      - "8080:8787" # 宿主机端口:容器内端口（可将 8080 修改为其他未占用的宿主机端口）
     environment:
       # 在这里配置你的 Solara 登录口令
       - PASSWORD=your_secure_password_here
@@ -61,30 +59,6 @@ services:
       # 持久化 SQLite 数据库（收藏夹和播放记录）
       - ./data:/app/data
 ```
-启动成功后，通过 `http://服务器IP` 即可立即访问。
-
-#### 场景 2：80 端口已被占用（例如配合 mofa/Nginx 伪装域名分流）
-如果您正在使用 `mofa` 的 Nginx 分流方案，宿主机 80 端口已被 Nginx 占用。此时，需要将宿主机映射端口修改为 mofa 中配置的**“伪装站本地映射端口”**（默认为 `8080`）：
-```yaml
-services:
-  solara:
-    image: ghcr.io/akudamatata/solara:latest
-    container_name: solara
-    restart: always
-    ports:
-      - "8080:8787" # 这里 8080 需要与 mofa Nginx 分流配置里填写的伪装站端口保持一致
-    environment:
-      # 在这里配置你的 Solara 登录口令
-      - PASSWORD=your_secure_password_here
-      # 音乐聚合 API 地址（当默认 API 被 Cloudflare 屏蔽/Challenge 时，可更换为备用地址）
-      - API_BASE_URL=https://music-api.gdstudio.xyz/api.php
-      # 界面语言（默认中文，填 ENG 切换为英文）
-      # - language=ENG
-    volumes:
-      # 持久化 SQLite 数据库（收藏夹和播放记录）
-      - ./data:/app/data
-```
-启动成功后，您无需直接在外网访问 `8080` 端口。外部对您伪装域名（如 `a.com`）的访问会被宿主机 Nginx 自动反向代理到本地的 `8080` 端口，从而无缝载入播放器。
 
 ---
 
