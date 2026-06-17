@@ -95,8 +95,9 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
     headers: request.headers
   });
 
-  // 如果是 GET 请求，尝试命中缓存
-  if (request.method === "GET") {
+  // 如果是 GET 请求，尝试命中缓存 (但获取音频播放直链 types=url 具有时效性，不缓存)
+  const isUrl = url.searchParams.get("types") === "url";
+  if (request.method === "GET" && !isUrl) {
     try {
       const cachedResponse = await cache.match(cacheKey);
       if (cachedResponse) {
@@ -141,12 +142,12 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
   headers.set("X-Cache-Status", "MISS");
   headers.set("Access-Control-Expose-Headers", "X-Cache-Status");
 
-  // 判断是否应该缓存：必须是 200 状态，且内容不能是空数组或包含错误标识
+  // 判断是否应该缓存：必须是 200 状态，且内容不能是空数组或包含错误标识，且不能是音频直链 types=url
   const isSearch = url.searchParams.get("types") === "search";
   const isEmptyResult = responseText.trim() === "[]";
   const isError = responseText.includes('"error"') || responseText.includes('"status":0');
   
-  let shouldCache = upstream.status === 200 && request.method === "GET" && !isError;
+  let shouldCache = upstream.status === 200 && request.method === "GET" && !isError && !isUrl;
   
   // 如果是搜索请求且结果为空，通常是 API 繁忙或异常，不建议长缓存
   if (isSearch && isEmptyResult) {

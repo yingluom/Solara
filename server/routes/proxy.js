@@ -75,23 +75,26 @@ async function proxyKuwoAudio(targetUrl, req, res) {
 /** 代理 music API 请求，带本地缓存 */
 async function proxyApiRequest(reqUrl, req, res) {
   const cacheKey = buildCacheKey(reqUrl);
+  const parsedReq = new URL(reqUrl);
+  const isUrl = parsedReq.searchParams.get('types') === 'url';
 
   // ── Cache HIT ──────────────────────────────────────────────────────────────
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    console.log(`[Cache HIT] ${reqUrl}`);
-    res.setHeader('Content-Type', cached.contentType || 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('X-Cache-Status', 'HIT');
-    res.setHeader('Access-Control-Expose-Headers', 'X-Cache-Status');
-    return res.send(cached.body);
+  if (!isUrl) {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      console.log(`[Cache HIT] ${reqUrl}`);
+      res.setHeader('Content-Type', cached.contentType || 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('X-Cache-Status', 'HIT');
+      res.setHeader('Access-Control-Expose-Headers', 'X-Cache-Status');
+      return res.send(cached.body);
+    }
   }
 
   // ── Cache MISS：请求上游 ────────────────────────────────────────────────────
   console.log(`[Cache MISS] Fetching from upstream: ${reqUrl}`);
 
   const apiUrl = new URL(API_BASE_URL);
-  const parsedReq = new URL(reqUrl);
   parsedReq.searchParams.forEach((value, key) => {
     if (key === 'target' || key === 'callback' || key === 's') return;
     apiUrl.searchParams.set(key, value);
@@ -122,7 +125,7 @@ async function proxyApiRequest(reqUrl, req, res) {
   const isEmptyResult = responseText.trim() === '[]';
   const isError = responseText.includes('"error"') || responseText.includes('"status":0');
 
-  let shouldCache = upstream.status === 200 && !isError;
+  let shouldCache = upstream.status === 200 && !isError && !isUrl;
   if (isSearch && isEmptyResult) shouldCache = false;
 
   if (shouldCache) {
