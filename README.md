@@ -46,6 +46,7 @@ services:
     image: ghcr.io/akudamatata/solara:latest
     container_name: solara
     restart: always
+    init: true # 解决容器停止时 Node/Wrangler 进程无法优雅响应 SIGTERM 导致卡顿的问题
     ports:
       - "8080:8787" # 宿主机端口:容器内端口（可将 8080 修改为其他未占用的宿主机端口）
     environment:
