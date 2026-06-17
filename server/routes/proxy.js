@@ -24,9 +24,10 @@ function isAllowedKuwoHost(hostname) {
 }
 
 function buildCacheKey(url) {
-  // 过滤随机防缓存签名 s 参数，与 Cloudflare 版本逻辑一致
+  // 过滤随机防缓存签名 s 以及 nocache 参数，以便重试成功后能更新同一个缓存项
   const u = new URL(url);
   u.searchParams.delete('s');
+  u.searchParams.delete('nocache');
   return u.toString();
 }
 
@@ -76,10 +77,10 @@ async function proxyKuwoAudio(targetUrl, req, res) {
 async function proxyApiRequest(reqUrl, req, res) {
   const cacheKey = buildCacheKey(reqUrl);
   const parsedReq = new URL(reqUrl);
-  const isUrl = parsedReq.searchParams.get('types') === 'url';
+  const bypassCache = parsedReq.searchParams.get('nocache') === 'true';
 
   // ── Cache HIT ──────────────────────────────────────────────────────────────
-  if (!isUrl) {
+  if (!bypassCache) {
     const cached = cache.get(cacheKey);
     if (cached) {
       console.log(`[Cache HIT] ${reqUrl}`);
@@ -96,7 +97,7 @@ async function proxyApiRequest(reqUrl, req, res) {
 
   const apiUrl = new URL(API_BASE_URL);
   parsedReq.searchParams.forEach((value, key) => {
-    if (key === 'target' || key === 'callback' || key === 's') return;
+    if (key === 'target' || key === 'callback' || key === 's' || key === 'nocache') return;
     apiUrl.searchParams.set(key, value);
   });
 
@@ -125,7 +126,7 @@ async function proxyApiRequest(reqUrl, req, res) {
   const isEmptyResult = responseText.trim() === '[]';
   const isError = responseText.includes('"error"') || responseText.includes('"status":0');
 
-  let shouldCache = upstream.status === 200 && !isError && !isUrl;
+  let shouldCache = upstream.status === 200 && !isError && !bypassCache;
   if (isSearch && isEmptyResult) shouldCache = false;
 
   if (shouldCache) {

@@ -86,18 +86,19 @@ async function proxyKuwoAudio(targetUrl: string, request: Request): Promise<Resp
 async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise: Promise<any>) => void, apiBaseUrl: string = DEFAULT_API_BASE_URL): Promise<Response> {
   const cache = caches.default;
   
-  // 构建缓存 Key（完整 URL 和原始方法，但过滤掉每次随机的防缓存签名 s）
+  // 构建缓存 Key（过滤掉随机签名 s 以及强制刷新标记 nocache，以便重试成功后能更新同一个缓存项）
   const cacheUrl = new URL(url.toString());
   cacheUrl.searchParams.delete("s");
+  cacheUrl.searchParams.delete("nocache");
   
   const cacheKey = new Request(cacheUrl.toString(), {
     method: request.method,
     headers: request.headers
   });
 
-  // 如果是 GET 请求，尝试命中缓存 (但获取音频播放直链 types=url 具有时效性，不缓存)
-  const isUrl = url.searchParams.get("types") === "url";
-  if (request.method === "GET" && !isUrl) {
+  // 如果是 GET 请求且未指定 nocache 强制刷新，尝试命中缓存
+  const bypassCache = url.searchParams.get("nocache") === "true";
+  if (request.method === "GET" && !bypassCache) {
     try {
       const cachedResponse = await cache.match(cacheKey);
       if (cachedResponse) {
@@ -116,7 +117,7 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
 
   const apiUrl = new URL(apiBaseUrl);
   url.searchParams.forEach((value, key) => {
-    if (key === "target" || key === "callback" || key === "s") {
+    if (key === "target" || key === "callback" || key === "s" || key === "nocache") {
       return;
     }
     apiUrl.searchParams.set(key, value);
@@ -142,12 +143,12 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
   headers.set("X-Cache-Status", "MISS");
   headers.set("Access-Control-Expose-Headers", "X-Cache-Status");
 
-  // 判断是否应该缓存：必须是 200 状态，且内容不能是空数组或包含错误标识，且不能是音频直链 types=url
+  // 判断是否应该缓存：必须是 200 状态，且内容不能是空数组或包含错误标识，且未指定强制刷新
   const isSearch = url.searchParams.get("types") === "search";
   const isEmptyResult = responseText.trim() === "[]";
   const isError = responseText.includes('"error"') || responseText.includes('"status":0');
   
-  let shouldCache = upstream.status === 200 && request.method === "GET" && !isError && !isUrl;
+  let shouldCache = upstream.status === 200 && request.method === "GET" && !isError && !bypassCache;
   
   // 如果是搜索请求且结果为空，通常是 API 繁忙或异常，不建议长缓存
   if (isSearch && isEmptyResult) {
