@@ -58,7 +58,7 @@ services:
       # - language=ENG
     volumes:
       # 持久化 SQLite 数据库（收藏夹和播放记录）
-      - ./data:/app/data
+      - ./data:/data
 ```
 
 ---

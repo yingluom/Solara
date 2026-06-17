@@ -29,15 +29,15 @@ _LANG_VALUE="${language:-${LANGUAGE:-}}"
 write_var "language" "$_LANG_VALUE"
 
 # ── 确保 D1 持久化目录存在 ────────────────────────────────────────────────────
-mkdir -p /app/data
-chmod 755 /app/data
+mkdir -p /data
+chmod 755 /data
 
 # ── 打印启动信息 ───────────────────────────────────────────────────────────────
 echo ""
 echo "  🌟 Solara  (Cloudflare Pages + Wrangler local dev)"
 echo "  ────────────────────────────────────────────────────"
 echo "  Port      : 8787"
-echo "  Data dir  : /app/data"
+echo "  Data dir  : /data"
 echo "  Password  : ${PASSWORD:+configured}${PASSWORD:-not set (open access)}"
 echo "  API URL   : ${API_BASE_URL:-https://music-api.gdstudio.xyz/api.php (default)}"
 echo "  Language  : ${_LANG_VALUE:-ZH (default)}"
@@ -54,4 +54,4 @@ exec wrangler pages dev . \
   --ip 0.0.0.0 \
   --port 8787 \
   --d1 DB \
-  --persist-to=/app/data
+  --persist-to=/data
