@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://music-api.gdstudio.xyz/api.php";
+const DEFAULT_API_BASE_URL = "https://music-api.gdstudio.xyz/api.php";
 const KUWO_HOST_PATTERN = /(^|\.)kuwo\.cn$/i;
 const SAFE_RESPONSE_HEADERS = ["content-type", "cache-control", "accept-ranges", "content-length", "content-range", "etag", "last-modified", "expires"];
 
@@ -83,7 +83,7 @@ async function proxyKuwoAudio(targetUrl: string, request: Request): Promise<Resp
   });
 }
 
-async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise: Promise<any>) => void): Promise<Response> {
+async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise: Promise<any>) => void, apiBaseUrl: string = DEFAULT_API_BASE_URL): Promise<Response> {
   const cache = caches.default;
   
   // 构建缓存 Key（完整 URL 和原始方法，但过滤掉每次随机的防缓存签名 s）
@@ -113,7 +113,7 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
 
   console.log(`[Cache MISS] Fetching from upstream: ${url.toString()}`);
 
-  const apiUrl = new URL(API_BASE_URL);
+  const apiUrl = new URL(apiBaseUrl);
   url.searchParams.forEach((value, key) => {
     if (key === "target" || key === "callback" || key === "s") {
       return;
@@ -174,7 +174,9 @@ async function proxyApiRequest(url: URL, request: Request, waitUntil?: (promise:
   return response;
 }
 
-export async function onRequest({ request, waitUntil }: { request: Request, waitUntil: (promise: Promise<any>) => void }): Promise<Response> {
+export async function onRequest({ request, waitUntil, env }: { request: Request, waitUntil: (promise: Promise<any>) => void, env: any }): Promise<Response> {
+  // 优先使用环境变量中配置的 API 地址，CF 部署未设置时 fallback 到默认节点
+  const apiBaseUrl = (typeof env?.API_BASE_URL === "string" && env.API_BASE_URL) ? env.API_BASE_URL : DEFAULT_API_BASE_URL;
   if (request.method === "OPTIONS") {
     return handleOptions();
   }
@@ -190,5 +192,5 @@ export async function onRequest({ request, waitUntil }: { request: Request, wait
     return proxyKuwoAudio(target, request);
   }
 
-  return proxyApiRequest(url, request, waitUntil);
+  return proxyApiRequest(url, request, waitUntil, apiBaseUrl);
 }
