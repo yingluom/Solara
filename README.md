@@ -40,6 +40,10 @@
 ### 🐳 Docker 一键部署 (适合私有服务器)
 无需下载和编译源码，只需在您的服务器上新建一个空白目录，创建 `docker-compose.yml` 文件，并配置相应的端口映射（默认推荐宿主机端口为 `8080`，可根据需要自行修改，配合 Nginx 等反向代理或直接外网访问）：
 
+> [!NOTE]
+> **Docker 版高性能优化**：
+> 本镜像已切换为 **Express + Wrangler 混合双引擎架构**，由 Express 前台代理高频数据读写与音频流式管道传输（支持切歌时连接立即自动中止释放，防 Socket 泄漏），由后台 Wrangler 专职负责微量 API 代理（利用 BoringSSL 指纹完美绕过 Cloudflare 验证），从而兼顾极佳的性能、稳定性与 CF 验证通过率。
+
 ```yaml
 services:
   solara:
@@ -164,8 +168,12 @@ Music-Player/
 ├── js/
 │   ├── index.js       # 播放器核心逻辑、状态管理与探索雷达分类
 │   └── mobile.js      # 移动端交互与事件处理
-├── Dockerfile         # Docker 镜像构建文件（基于 Wrangler@3 服务端形态）
-├── docker-entrypoint.sh # Docker 容器入口脚本（动态生成本地 .dev.vars 变量）
+├── server/            # Node.js 独立/流式 Express 服务器（Docker 版核心宿主）
+│   ├── routes/        # 服务器代理路由与取色分析逻辑
+│   ├── index.js       # Express 服务入口
+│   └── db.js          # 高性能 SQLite 数据库控制器 (WAL 模式)
+├── Dockerfile         # Docker 镜像构建文件（基于混合双引擎高性能服务形态）
+├── docker-entrypoint.sh # Docker 容器入口脚本（并行启动后台 Wrangler 与前台 Express）
 ├── docker-compose.yml # Docker Compose 配置文件
 ├── favicon.png
 ├── favicon.svg
