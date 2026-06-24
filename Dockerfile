@@ -14,6 +14,9 @@ RUN npm install -g wrangler@3 --ignore-scripts
 # 复制项目文件（server/node_modules、data、.git 等已由 .dockerignore 排除）
 COPY . .
 
+# 安装 Node.js 独立服务器的依赖
+RUN cd /app/server && npm install --ignore-scripts
+
 # 创建数据持久化目录（SQLite / D1 本地模拟文件写入此处）
 RUN mkdir -p /app/data
 

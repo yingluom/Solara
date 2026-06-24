@@ -54,8 +54,17 @@ async function proxyKuwoAudio(targetUrl, req, res) {
   };
   if (req.headers['range']) headers['Range'] = req.headers['range'];
 
+  const controller = new AbortController();
+  req.on('close', () => {
+    controller.abort();
+  });
+
   try {
-    const upstream = await fetch(parsed.toString(), { method: req.method, headers });
+    const upstream = await fetch(parsed.toString(), {
+      method: req.method,
+      headers,
+      signal: controller.signal
+    });
     res.status(upstream.status);
 
     for (const h of SAFE_RESPONSE_HEADERS) {
@@ -65,9 +74,13 @@ async function proxyKuwoAudio(targetUrl, req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'public, max-age=3600');
 
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    return res.send(buf);
+    const { Readable } = require('node:stream');
+    return Readable.fromWeb(upstream.body).pipe(res);
   } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('[Proxy Kuwo] Request aborted by client');
+      return;
+    }
     console.error('[Proxy Kuwo]', err);
     return res.status(502).send('Upstream error');
   }
@@ -95,33 +108,59 @@ async function proxyApiRequest(reqUrl, req, res) {
   // ── Cache MISS：请求上游 ────────────────────────────────────────────────────
   console.log(`[Cache MISS] Fetching from upstream: ${reqUrl}`);
 
-  const apiUrl = new URL(API_BASE_URL);
-  parsedReq.searchParams.forEach((value, key) => {
-    if (key === 'target' || key === 'callback' || key === 's' || key === 'nocache') return;
-    apiUrl.searchParams.set(key, value);
-  });
-
-  if (!apiUrl.searchParams.has('types')) {
-    return res.status(400).send('Missing types');
-  }
-
   let upstream;
-  try {
-    upstream = await fetch(apiUrl.toString(), {
-      headers: {
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
-        'Accept': 'application/json',
-      },
+  let responseText;
+  let contentType;
+
+  if (process.env.WRANGLER_API_URL) {
+    // 转发给内部 Wrangler，利用其 BoringSSL 绕过 Cloudflare 验证
+    const wranglerUrl = new URL(process.env.WRANGLER_API_URL + '/proxy');
+    parsedReq.searchParams.forEach((value, key) => {
+      if (key === 'target' || key === 'callback' || key === 's' || key === 'nocache') return;
+      wranglerUrl.searchParams.set(key, value);
     });
-  } catch (err) {
-    console.error('[Proxy API fetch]', err);
-    return res.status(502).send('Upstream error');
+
+    try {
+      upstream = await fetch(wranglerUrl.toString(), {
+        headers: {
+          'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+          'Accept': 'application/json',
+        },
+      });
+      responseText = await upstream.text();
+      contentType = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
+    } catch (err) {
+      console.error('[Proxy API via Wrangler fetch]', err);
+      return res.status(502).send('Upstream proxy error');
+    }
+  } else {
+    // 原逻辑，未配置 WRANGLER_API_URL 时直接 fetch API_BASE_URL
+    const apiUrl = new URL(API_BASE_URL);
+    parsedReq.searchParams.forEach((value, key) => {
+      if (key === 'target' || key === 'callback' || key === 's' || key === 'nocache') return;
+      apiUrl.searchParams.set(key, value);
+    });
+
+    if (!apiUrl.searchParams.has('types')) {
+      return res.status(400).send('Missing types');
+    }
+
+    try {
+      upstream = await fetch(apiUrl.toString(), {
+        headers: {
+          'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0',
+          'Accept': 'application/json',
+        },
+      });
+      responseText = await upstream.text();
+      contentType = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
+    } catch (err) {
+      console.error('[Proxy API fetch]', err);
+      return res.status(502).send('Upstream error');
+    }
   }
 
-  const responseText = await upstream.text();
-  const contentType = upstream.headers.get('content-type') || 'application/json; charset=utf-8';
-
-  // ── 判断是否缓存（与 Cloudflare 版本逻辑完全一致）──────────────────────────
+  // ── 判断是否缓存（与 Cloudflare 版本逻辑完全一致） ──────────────────────────
   const isSearch = parsedReq.searchParams.get('types') === 'search';
   const isEmptyResult = responseText.trim() === '[]';
   const isError = responseText.includes('"error"') || responseText.includes('"status":0');

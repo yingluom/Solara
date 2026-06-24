@@ -255,11 +255,15 @@ module.exports = function createPaletteRouter() {
 
     // ── Fetch 上游图片（无 Cloudflare 专有选项）────────────────────────────────
     let upstream;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
-      upstream = await fetch(target.toString());
+      upstream = await fetch(target.toString(), { signal: controller.signal });
     } catch (err) {
       console.error('[Palette fetch]', err);
       return res.status(502).json({ error: 'Failed to fetch image' });
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     if (!upstream.ok) {

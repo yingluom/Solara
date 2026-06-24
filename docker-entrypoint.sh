@@ -44,14 +44,21 @@ echo "  Language  : ${_LANG_VALUE:-ZH (default)}"
 echo "  ────────────────────────────────────────────────────"
 echo ""
 
-# ── 启动 wrangler pages dev ───────────────────────────────────────────────────
-#   .            → 项目根目录（包含 index.html、css/、js/、functions/ 等）
-#   --ip 0.0.0.0 → 允许容器外访问
-#   --port 8787  → 绑定端口
-#   --d1 DB      → 创建名为 DB 的本地 D1 数据库（与 functions/api/storage.ts 中 env.DB 对应）
-#   --persist-to → D1 / KV / R2 数据持久化目录（volume 挂载此路径可跨重启保留数据）
-exec wrangler pages dev . \
-  --ip 0.0.0.0 \
-  --port 8787 \
+# ── 启动 wrangler pages dev 监听本地 8788 端口 ───────────────────────────────
+echo "Starting wrangler pages dev in background on port 8788..."
+wrangler pages dev . \
+  --ip 127.0.0.1 \
+  --port 8788 \
   --d1 DB \
-  --persist-to=/data
+  --persist-to=/data > /tmp/wrangler.log 2>&1 &
+
+sleep 2
+
+# ── 启动 Node.js 独立服务器监听 8787 端口 ──────────────────────────────────────
+echo "Starting Node.js standalone server on port 8787..."
+export PORT=8787
+export HOST=0.0.0.0
+export DATA_DIR=/data
+export WRANGLER_API_URL=http://127.0.0.1:8788
+
+exec node server/index.js
